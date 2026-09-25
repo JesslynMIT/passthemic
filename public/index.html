@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f3ee">
+<title>Pass the Mic</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- ===== JOIN ===== -->
+<section id="join" class="screen">
+  <div>
+    <div class="serif" style="font-size:40px;line-height:1.05">Pass the Mic</div>
+    <p style="margin:10px 0 0;font-size:16px;line-height:1.4;color:var(--muted)">Speak from your seat. Your phone becomes the room mic when it's your turn.</p>
+  </div>
+  <form id="joinForm" class="card" style="gap:14px" autocomplete="off">
+    <div>
+      <label for="code">Session code</label>
+      <input id="code" type="text" placeholder="WED-412" style="letter-spacing:2px;text-transform:uppercase;font-family:'Fraunces',Georgia,serif;font-size:24px" required>
+    </div>
+    <div>
+      <label for="name">Your name</label>
+      <input id="name" type="text" placeholder="Maria L." maxlength="40" required>
+      <div class="hint" style="margin-top:6px">Shown to the facilitator when you raise your hand.</div>
+    </div>
+    <div id="joinError" class="error hidden"></div>
+    <button class="btn primary" type="submit">Join the room</button>
+  </form>
+  <div class="notice">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#b4530a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v5"/><path d="M8 22h8"/></svg>
+    <div>Your browser will ask for microphone access when it's your turn. Your mic only turns on when the facilitator gives you the floor.</div>
+  </div>
+  <div class="hint" style="text-align:center">No app to install · works in your browser</div>
+</section>
+
+<!-- ===== IN ROOM (idle / hand raised) ===== -->
+<section id="room" class="screen hidden">
+  <div class="row">
+    <div class="grow">
+      <div class="eyebrow" id="roomName">Session</div>
+      <div style="font-size:15px;color:#3d3934"><span id="meName"></span> · <span id="count">0</span> here</div>
+    </div>
+    <button class="iconbtn" id="leave" aria-label="Leave session" style="background:#fff;border:1px solid #d9d2c5;width:44px;height:44px;border-radius:12px">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3d3934" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </button>
+  </div>
+
+  <div class="card" id="speakingCard">
+    <div class="row" style="gap:8px"><span class="dot" id="speakingDot"></span><span class="eyebrow" id="speakingLabel" style="color:var(--green-ink)">Speaking now</span></div>
+    <div class="row">
+      <div class="avatar" id="speakingAvatar">—</div>
+      <div>
+        <div style="font-size:18px;font-weight:700" id="speakingName">Nobody yet</div>
+        <div class="hint" id="speakingSub">Raise your hand to get the floor</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="center">
+    <button class="bigbtn" id="hand" aria-label="Raise hand">
+      <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 11V6a2 2 0 0 0-4 0v5"/><path d="M14 10V4a2 2 0 0 0-4 0v2"/><path d="M10 10.5V6a2 2 0 0 0-4 0v8"/><path d="M18 8a2 2 0 1 1 4 0v6a8 8 0 0 1-8 8h-2c-2.8 0-4.5-.86-5.99-2.34l-3.6-3.6a2 2 0 0 1 2.83-2.82L7 15"/></svg>
+      <div class="t" id="handTitle">Raise hand</div>
+      <div class="s" id="handSub">Tap when you want to speak</div>
+    </button>
+    <div>
+      <div class="serif" id="posTitle" style="font-size:30px;line-height:1">&nbsp;</div>
+      <div class="hint" id="posSub" style="font-size:15px;margin-top:4px">&nbsp;</div>
+    </div>
+  </div>
+
+  <div class="notice quiet" id="micNote">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#6b655b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="2" y1="2" x2="22" y2="22"/></svg>
+    <div id="micNoteText">Your mic is off. You can close this now — open it again to raise your hand.</div>
+  </div>
+
+  <!-- facilitator controls (only when promoted) -->
+  <div class="facbar hidden" id="facbar">
+    <div class="row"><span class="eyebrow" style="color:#a39c90">You're running the queue</span><span class="grow"></span><span class="hint" style="color:#a39c90" id="facCount"></span></div>
+    <div class="row">
+      <button class="btn primary grow" id="facNext" style="height:52px">Next</button>
+      <button class="btn small outline-light" id="facCut" style="height:52px">Cut</button>
+    </div>
+    <div class="list" id="facQueue"></div>
+    <details><summary class="hint" style="color:#a39c90;cursor:pointer">Hand off host role</summary><div class="list" id="facMembers" style="margin-top:8px"></div></details>
+  </div>
+</section>
+
+<!-- ===== LIVE ===== -->
+<section id="live" class="screen hidden">
+  <div class="row">
+    <span class="dot red pulse"></span><span class="eyebrow" style="color:#fff;letter-spacing:1px">Live · mic on</span>
+    <span class="grow"></span><span id="liveTimer" style="color:var(--green-text);font-weight:500">0:00</span>
+  </div>
+  <div class="center">
+    <div class="livering">
+      <svg width="88" height="88" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><path d="M12 17v5"/><path d="M8 22h8"/></svg>
+    </div>
+    <div class="meter" id="meter"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <div>
+      <div class="serif" style="font-size:38px;line-height:1.05" id="liveTitle">You have the floor</div>
+      <div style="font-size:16px;line-height:1.4;color:var(--green-text);max-width:280px;margin:8px auto 0" id="liveSub">Speak normally, phone near your mouth. The room can hear you.</div>
+    </div>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    <div class="row" style="padding:12px 16px;background:#1f6b3d;border-radius:12px"><div class="avatar" style="width:30px;height:30px;font-size:12px" id="nextAvatar">—</div><div style="font-size:14px;color:#dff3e6" id="nextName">Nobody in the queue yet</div></div>
+    <div class="row">
+      <button class="btn outline-light" id="mute" style="flex:1">Mute</button>
+      <button class="btn white" id="done" style="flex:2">I'm done — pass it on</button>
+    </div>
+    <div class="hint" style="text-align:center;color:#9fd1b1" id="silenceHint">Mic releases automatically after 90s of silence</div>
+  </div>
+</section>
+
+<script src="/common.js"></script>
+<script>
+const { $, setHTML, connect, ICE, initials, mmss, ago, ordinal, esc, keepAwake } = PTM;
+const SILENCE_MS = 90_000, SILENCE_RMS = 0.012;
+
+// ---- state ----
+const store = { get: k => { try { return localStorage.getItem(k) || ''; } catch { return ''; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch {} }, del: k => { try { localStorage.removeItem(k); } catch {} } };
+let me = { id: store.get('ptm.id'), name: store.get('ptm.name'), code: store.get('ptm.code') };
+let state = null;           // last server state
+let pc = null, stream = null, audioCtx = null, analyser = null, meterTimer = null, silenceStart = 0, muted = false, liveTimerT = null;
+let joining = false, pendingIce = [];
+
+const params = new URLSearchParams(location.search);
+// A new QR code / link for a different session wins over the remembered one.
+if (params.get('code') && params.get('code').toUpperCase() !== me.code) { me.code = ''; me.id = ''; }
+$('#code').value = (params.get('code') || me.code || '').toUpperCase();
+// Remembered session + name → rejoin silently; the join form only shows the first time.
+const autoJoin = !!(me.code && me.name);
+if (autoJoin) { $('#join').classList.add('hidden'); }
+$('#name').value = me.name;
+
+const sock = connect({
+  onOpen() { if (me.code && me.name) sock.send({ type: 'join', code: me.code, name: me.name, id: me.id }); },
+  onMessage(m) {
+    switch (m.type) {
+      case 'error': joining = false; me.code = ''; store.del('ptm.code'); show('join'); showError(m.error); break;
+      case 'joined': me.id = m.id; me.code = m.code; store.set('ptm.id', me.id); store.set('ptm.code', me.code); joining = false; if (!pc) show('room'); break;
+      case 'replaced': $('#posTitle').textContent = 'Opened on another tab'; $('#posSub').textContent = 'This session moved to your newest tab.'; break;
+      case 'state': state = m; render(); break;
+      case 'go-live': goLive(); break;
+      case 'live-ended': endLive(m.reason); break;
+      case 'signal': onSignal(m.data); break;
+    }
+  },
+  onClose() { if (state) { $('#speakingSub').textContent = 'Reconnecting…'; } },
+});
+
+// ---- join ----
+$('#joinForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  if (joining) return;
+  me.code = $('#code').value.trim().toUpperCase();
+  me.name = $('#name').value.trim();
+  store.set('ptm.name', me.name);
+  $('#joinError').classList.add('hidden');
+  joining = true;
+  sock.send({ type: 'join', code: me.code, name: me.name, id: me.id, claimFacilitator: params.get('facilitator') === '1' });
+});
+function showError(t) { const el = $('#joinError'); el.textContent = t; el.classList.remove('hidden'); }
+$('#leave').onclick = () => { sock.send({ type: 'leave' }); store.del('ptm.id'); store.del('ptm.code'); me.id = ''; me.code = ''; location.href = '/'; };
+
+// ---- hand ----
+$('#hand').onclick = () => { if (!state) return; sock.send({ type: state.you.handRaised ? 'lower' : 'raise' }); };
+
+// ---- facilitator controls ----
+$('#facNext').onclick = () => sock.send({ type: 'next' });
+$('#facCut').onclick = () => sock.send({ type: 'cut' });
+$('#facQueue').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  sock.send({ type: b.dataset.act, id: b.dataset.id });
+});
+$('#facMembers').addEventListener('click', (e) => {
+  const b = e.target.closest('button[data-id]'); if (!b) return;
+  sock.send({ type: 'handoff', id: b.dataset.id, on: b.dataset.on === '1' });
+});
+
+// ---- live ----
+$('#mute').onclick = () => { muted = !muted; if (stream) stream.getAudioTracks().forEach(t => t.enabled = !muted); $('#mute').textContent = muted ? 'Unmute' : 'Mute'; $('#liveTitle').textContent = muted ? 'Muted' : 'You have the floor'; sock.send({ type: 'mute', muted }); };
+$('#done').onclick = () => { sock.send({ type: 'done', reason: 'done' }); endLive('done'); };
+
+async function goLive() {
+  if (pc) return;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: false });
+  } catch (err) {
+    $('#liveSub').textContent = 'Microphone blocked. Allow mic access in your browser settings and tap Raise hand again.';
+    sock.send({ type: 'done', reason: 'mic-denied' });
+    return;
+  }
+  muted = false; $('#mute').textContent = 'Mute';
+  show('live'); document.body.classList.add('live');
+  pc = new RTCPeerConnection(ICE);
+  stream.getTracks().forEach(t => pc.addTrack(t, stream));
+  pc.onicecandidate = (e) => { if (e.candidate) sock.send({ type: 'signal', data: { candidate: e.candidate } }); };
+  pc.onconnectionstatechange = () => { if (pc && (pc.connectionState === 'failed')) $('#liveSub').textContent = 'Connection to the room speaker failed. Check WiFi and try again.'; };
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  sock.send({ type: 'signal', data: { sdp: pc.localDescription } });
+  startMeter();
+  liveTimerT = setInterval(() => { if (state && state.room.live) $('#liveTimer').textContent = mmss(Date.now() - state.room.live.since); }, 500);
+}
+
+async function onSignal(data) {
+  if (!pc) return;
+  if (data.sdp) { await pc.setRemoteDescription(data.sdp); for (const c of pendingIce) await pc.addIceCandidate(c); pendingIce = []; }
+  else if (data.candidate) { if (pc.remoteDescription) await pc.addIceCandidate(data.candidate); else pendingIce.push(data.candidate); }
+}
+
+function endLive(reason) {
+  if (pc) { pc.close(); pc = null; }
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  stopMeter(); clearInterval(liveTimerT);
+  document.body.classList.remove('live');
+  show('room');
+  const why = { cut: 'The facilitator moved on.', replaced: 'The facilitator gave the floor to someone else.', silence: 'Released after 90s of silence.', 'host-left': 'The room speaker disconnected.' }[reason];
+  if (why) { $('#posTitle').textContent = 'Your turn ended'; $('#posSub').textContent = why; }
+}
+
+// mic level meter + silence watchdog
+function startMeter() {
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const src = audioCtx.createMediaStreamSource(stream);
+    analyser = audioCtx.createAnalyser(); analyser.fftSize = 512; src.connect(analyser);
+    const buf = new Float32Array(analyser.fftSize); const bars = [...$('#meter').children];
+    silenceStart = Date.now();
+    meterTimer = setInterval(() => {
+      analyser.getFloatTimeDomainData(buf);
+      let sum = 0; for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+      const rms = Math.sqrt(sum / buf.length);
+      bars.forEach((b, i) => { b.style.height = `${8 + Math.min(32, rms * 900 * (0.6 + Math.sin(i * 1.3 + Date.now() / 90) * 0.4))}px`; });
+      if (rms > SILENCE_RMS && !muted) silenceStart = Date.now();
+      const quiet = Date.now() - silenceStart;
+      $('#silenceHint').textContent = quiet > 15000 ? `Mic releases in ${Math.ceil((SILENCE_MS - quiet) / 1000)}s unless you speak` : 'Mic releases automatically after 90s of silence';
+      if (quiet > SILENCE_MS) { sock.send({ type: 'done', reason: 'silence' }); endLive('silence'); }
+    }, 100);
+  } catch { /* meter is optional */ }
+}
+function stopMeter() { clearInterval(meterTimer); if (audioCtx) { audioCtx.close().catch(() => {}); audioCtx = null; } }
+
+// ---- render ----
+function show(id) { for (const s of ['join', 'room', 'live']) $('#' + s).classList.toggle('hidden', s !== id); }
+
+function render() {
+  const { room, you } = state; if (!you) return;
+  $('#roomName').textContent = room.name; $('#meName').textContent = you.name; $('#count').textContent = room.count;
+  document.title = you.live ? '● LIVE — Pass the Mic' : you.handRaised ? `#${you.position} in queue — Pass the Mic` : 'Pass the Mic';
+
+  // speaking card
+  const live = room.live;
+  $('#speakingDot').className = 'dot' + (live ? '' : ' hidden');
+  $('#speakingLabel').textContent = live ? 'Speaking now' : 'Floor is open';
+  $('#speakingAvatar').textContent = live ? initials(live.name) : '—';
+  $('#speakingName').textContent = live ? live.name : 'Nobody yet';
+  const nxt = room.queue[0];
+  $('#speakingSub').textContent = live ? (live.muted ? 'Muted' : mmss(Date.now() - live.since) + ' so far') + (nxt ? ` · ${nxt.name} is next` : '') : (nxt ? `${nxt.name} is up next` : 'Raise your hand to get the floor');
+
+  // Keep the screen on only while the hand is up or live; otherwise the phone can sleep or the app can be closed.
+  window.__wantAwake = you.handRaised || you.live;
+  if (window.__wantAwake) keepAwake();
+
+  // hand button
+  const hb = $('#hand'); hb.classList.toggle('raised', you.handRaised);
+  hb.setAttribute('aria-label', you.handRaised ? 'Lower hand' : 'Raise hand');
+  $('#handTitle').textContent = you.handRaised ? 'Hand raised' : 'Raise hand';
+  $('#handSub').textContent = you.handRaised ? 'Tap to lower' : 'Tap when you want to speak';
+  if (you.handRaised) {
+    const ahead = room.queue.slice(0, you.position - 1).map(q => q.name);
+    $('#posTitle').textContent = you.position === 1 ? "You're next" : `You're ${ordinal(you.position)}`;
+    $('#posSub').textContent = you.position === 1 ? (live ? `Get ready — after ${live.name}` : 'Get ready — the facilitator will call on you') : `${ahead.slice(0, 2).join(', ')}${ahead.length > 2 ? ` +${ahead.length - 2}` : ''} ahead of you`;
+    if (you.onDeck) prewarmMic();
+    $('#micNoteText').textContent = you.onDeck ? 'Keep this open — you\'re next' : 'Keep this open while your hand is up';
+  } else if (!$('#posTitle').textContent.startsWith('Your turn ended')) {
+    const n = room.queue.length;
+    $('#posTitle').textContent = n ? `${n} hand${n > 1 ? 's' : ''} raised` : 'No hands raised';
+    $('#posSub').textContent = n ? room.queue.slice(0, 3).map(q => q.name).join(', ') : 'Be the first';
+  }
+  if (!you.handRaised && !you.live) $('#micNoteText').textContent = 'Your mic is off. You can close this now — open it again to raise your hand.';
+
+  // live screen extras
+  $('#nextAvatar').textContent = nxt ? initials(nxt.name) : '—';
+  $('#nextName').textContent = nxt ? `${nxt.name} is next` : 'Nobody in the queue yet';
+
+  // facilitator bar
+  const fb = $('#facbar'); fb.classList.toggle('hidden', !you.facilitator);
+  if (you.facilitator) {
+    const nxtOpen = room.queue.find(q => !q.away);
+    $('#facNext').textContent = nxtOpen ? `Next: ${nxtOpen.name}` : (live ? 'End turn' : 'Next');
+    $('#facNext').disabled = !nxtOpen && !live;
+    $('#facCut').disabled = !live;
+    $('#facCount').textContent = `${room.queue.length} hand${room.queue.length === 1 ? '' : 's'} raised`;
+    setHTML('#facQueue', room.queue.map(q => `
+      <div class="item${q.onDeck ? ' deck' : ''}" style="background:#2e2b26;border-color:${q.onDeck ? '#b4530a' : '#3d3934'};color:#fff">
+        <div class="n" style="color:${q.onDeck ? '#f0c9a6' : '#a39c90'}">${q.position}</div>
+        <div class="grow"><div class="name">${esc(q.name)}</div><div class="sub" style="color:#a39c90">${q.away ? 'Phone closed — will be skipped' : q.onDeck ? 'On deck' : 'Raised ' + ago(q.raisedAt)}</div></div>
+        <button class="btn small ghost" data-act="grant" data-id="${q.id}" ${q.away ? 'disabled' : ''} style="background:transparent;color:#fff;border-color:#5c574f">Give floor</button>
+        <button class="iconbtn" data-act="remove" data-id="${q.id}" aria-label="Remove ${esc(q.name)} from queue" style="background:#3d3934">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>`).join('') || '<div class="hint" style="color:#a39c90">No hands raised</div>');
+    setHTML('#facMembers', room.members.filter(m => m.id !== you.id).map(m => `
+      <div class="row" style="justify-content:space-between"><span>${esc(m.name)}${m.facilitator ? ' <span class="pill warm">host</span>' : ''}</span>
+      <button class="btn small ghost" data-id="${m.id}" data-on="${m.facilitator ? 0 : 1}" style="background:transparent;color:#fff;border-color:#5c574f">${m.facilitator ? 'Remove host' : 'Make host'}</button></div>`).join('') || '<div class="hint" style="color:#a39c90">Nobody else here yet</div>');
+  }
+}
+setInterval(() => { if (state && !$('#room').classList.contains('hidden')) render(); }, 1000);
+
+// Ask for the mic while on deck so the handoff is instant when the facilitator taps Next.
+let prewarmed = false;
+async function prewarmMic() {
+  if (prewarmed || stream) return; prewarmed = true;
+  try { const s = await navigator.mediaDevices.getUserMedia({ audio: true }); s.getTracks().forEach(t => t.stop()); } catch { prewarmed = false; }
+}
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+</script>
+</body>
+</html>

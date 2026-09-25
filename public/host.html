@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pass the Mic — Room screen</title>
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+<style>
+  body { background: #1f1d1a; color: #fff; }
+  .wrap { min-height: 100dvh; padding: 40px 48px; display: flex; gap: 40px; }
+  .main { flex: 1; display: flex; flex-direction: column; gap: 28px; min-width: 0; }
+  .side { width: 340px; flex-shrink: 0; display: flex; flex-direction: column; gap: 20px; }
+  .qrcard { background: var(--bg); color: var(--ink); border-radius: 24px; padding: 28px 24px; display: flex; flex-direction: column; align-items: center; gap: 16px; text-align: center; }
+  .qrcard img { width: 220px; height: 220px; border-radius: 8px; background: #fff; }
+  .livebox { background: var(--green); border-radius: 24px; padding: 28px 32px; display: flex; flex-direction: column; gap: 14px; }
+  .livebox.idle { background: #2e2b26; }
+  .bigname { font-family: 'Fraunces', Georgia, serif; font-size: 56px; font-weight: 600; line-height: 1; }
+  .qitem { display: flex; align-items: center; gap: 18px; padding: 14px 20px; background: #2e2b26; border-radius: 14px; border: 2px solid transparent; }
+  .qitem.deck { border-color: var(--accent); }
+  .qitem .n { font-family: 'Fraunces', Georgia, serif; font-size: 26px; font-weight: 600; color: #a39c90; width: 30px; }
+  .qitem.deck .n { color: #f0c9a6; }
+  .qitem .name { font-size: 24px; font-weight: 700; }
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn.dark { background: #2e2b26; color: #fff; border: 1.5px solid #4a463f; }
+  .setup { max-width: 520px; margin: 10vh auto; display: flex; flex-direction: column; gap: 18px; }
+  .setup input { color: var(--ink); }
+  body.screen-mode .controls, body.screen-mode .qitem button, body.screen-mode .members { display: none; }
+  body.screen-mode .bigname { font-size: 72px; }
+  .members { display: flex; flex-wrap: wrap; gap: 8px; }
+  .members button { font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 999px; border: 1px solid #4a463f; background: transparent; color: #e9e3d8; cursor: pointer; }
+  .members button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #unmute { position: fixed; inset: 0; background: rgba(31,29,26,.92); display: flex; align-items: center; justify-content: center; z-index: 9; }
+  @media (max-width: 900px) { .wrap { flex-direction: column; padding: 24px; } .side { width: auto; } .bigname { font-size: 40px; } }
+</style>
+</head>
+<body>
+
+<section id="setup" class="setup">
+  <div class="eyebrow" style="color:#a39c90">Pass the Mic · host device</div>
+  <div class="serif" style="font-size:40px;line-height:1.05">Start a session</div>
+  <p style="color:#a39c90;line-height:1.5;margin:0">Run this page on the laptop or phone that's plugged into the room speakers. It plays whoever has the floor and shows the QR code for everyone else to join.</p>
+  <form id="setupForm" style="display:flex;flex-direction:column;gap:12px">
+    <label for="sname" style="color:#e9e3d8">Session name</label>
+    <input id="sname" type="text" value="Wednesday Study Group" maxlength="60" required>
+    <button class="btn primary" type="submit">Create session</button>
+  </form>
+  <div class="hint" style="color:#a39c90">Tip: press F11 (or the fullscreen button later) to put this on the projector.</div>
+</section>
+
+<div id="unmute" class="hidden">
+  <button class="btn primary" id="unmuteBtn" style="height:72px;font-size:22px;padding:0 32px">Tap to enable room audio</button>
+</div>
+
+<div id="app" class="wrap hidden">
+  <div class="main">
+    <div class="row" style="align-items:flex-start">
+      <div class="grow">
+        <div class="eyebrow" style="color:#a39c90">Pass the Mic</div>
+        <div class="serif" id="title" style="font-size:44px;line-height:1.05">Session</div>
+      </div>
+      <div class="pill" id="count" style="background:#2e2b26;color:#e9e3d8;font-size:16px;padding:8px 14px">0 in the room</div>
+    </div>
+
+    <div class="livebox idle" id="livebox">
+      <div class="row">
+        <span class="dot red pulse" id="liveDot"></span>
+        <span class="eyebrow" id="liveLabel" style="color:var(--green-text)">Speaking now</span>
+        <span class="grow"></span>
+        <span id="liveTimer" style="font-size:22px;color:var(--green-text)"></span>
+      </div>
+      <div class="row" style="gap:22px">
+        <div class="avatar" id="liveAvatar" style="width:84px;height:84px;font-size:30px">—</div>
+        <div class="bigname" id="liveName">Floor is open</div>
+      </div>
+      <div class="controls">
+        <button class="btn primary" id="next" style="height:56px">Next</button>
+        <button class="btn dark" id="cut" style="height:56px">Cut</button>
+        <span class="grow"></span>
+        <button class="btn dark small" id="screenMode" style="height:56px">Room screen mode</button>
+        <button class="btn dark small" id="fullscreen" style="height:56px">Fullscreen</button>
+      </div>
+    </div>
+
+    <div>
+      <div class="row" style="margin-bottom:12px"><span class="eyebrow" style="color:#a39c90" id="qlabel">Up next · 0 hands raised</span></div>
+      <div class="list" id="queue" style="gap:10px"></div>
+    </div>
+
+    <div class="members-wrap">
+      <div class="eyebrow" style="color:#a39c90;margin-bottom:10px">Who can run the queue from their phone <span style="text-transform:none;letter-spacing:0;font-weight:400">— tap a name to hand off</span></div>
+      <div class="members" id="members"></div>
+    </div>
+  </div>
+
+  <div class="side">
+    <div class="qrcard">
+      <div class="eyebrow">Scan to join</div>
+      <img id="qr" alt="QR code to join this session">
+      <div>
+        <div class="hint">or open <span id="joinUrl" style="font-weight:700;color:var(--ink)"></span> and enter</div>
+        <div class="serif" id="code" style="font-size:40px;letter-spacing:4px;margin-top:4px">—</div>
+      </div>
+      <div class="hint">No app to install. Mics stay off until it's your turn.</div>
+    </div>
+    <div class="hint" id="status" style="color:#a39c90;text-align:center">Connecting…</div>
+  </div>
+</div>
+
+<audio id="out" autoplay playsinline></audio>
+
+<script src="/common.js"></script>
+<script>
+const { $, setHTML, connect, ICE, initials, mmss, ago, esc, keepAwake } = PTM;
+let state = null, pc = null, liveId = null, code = sessionStorage.getItem('ptm.hostCode') || '', pendingIce = [];
+const out = $('#out');
+window.__host = { get tracks() { return out.srcObject ? out.srcObject.getAudioTracks().length : 0; }, get pcState() { return pc ? pc.connectionState : 'none'; } };
+
+const sock = connect({
+  onOpen() { if (code) sock.send({ type: 'host:create', code, name: sessionStorage.getItem('ptm.hostName') || '' }); $('#status').textContent = 'Connected'; },
+  onMessage(m) {
+    switch (m.type) {
+      case 'created': code = m.code; sessionStorage.setItem('ptm.hostCode', code); $('#setup').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#code').textContent = code; $('#qr').src = `/qr.svg?code=${code}`; $('#joinUrl').textContent = location.host; window.__wantAwake = true; keepAwake(); break;
+      case 'state': state = m; render(); break;
+      case 'signal': onSignal(m.from, m.data); break;
+      case 'live-ended': teardown(); break;
+      case 'host-replaced': $('#status').textContent = 'Another device took over as host.'; break;
+    }
+  },
+  onClose() { $('#status').textContent = 'Reconnecting…'; },
+});
+
+$('#setupForm').addEventListener('submit', (e) => { e.preventDefault(); const name = $('#sname').value.trim(); sessionStorage.setItem('ptm.hostName', name); sock.send({ type: 'host:create', name }); });
+$('#next').onclick = () => sock.send({ type: 'next' });
+$('#cut').onclick = () => sock.send({ type: 'cut' });
+$('#screenMode').onclick = () => { document.body.classList.toggle('screen-mode'); $('#screenMode').textContent = document.body.classList.contains('screen-mode') ? 'Show controls' : 'Room screen mode'; };
+$('#fullscreen').onclick = () => { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(() => {}); };
+$('#queue').addEventListener('click', (e) => { const b = e.target.closest('button[data-act]'); if (b) sock.send({ type: b.dataset.act, id: b.dataset.id }); });
+$('#members').addEventListener('click', (e) => { const b = e.target.closest('button[data-id]'); if (b) sock.send({ type: 'handoff', id: b.dataset.id, on: b.dataset.on === '1' }); });
+
+// Browsers block autoplay until the page has been clicked once.
+out.play().catch(() => $('#unmute').classList.remove('hidden'));
+$('#unmuteBtn').onclick = () => { out.play().catch(() => {}); $('#unmute').classList.add('hidden'); };
+
+// ---- WebRTC: one incoming connection at a time, from whoever is live ----
+async function onSignal(from, data) {
+  if (!state || !state.room.live || state.room.live.id !== from) return;
+  if (data.sdp && data.sdp.type === 'offer') {
+    teardown();
+    liveId = from;
+    pc = new RTCPeerConnection(ICE);
+    pc.ontrack = (e) => { out.srcObject = e.streams[0]; out.play().catch(() => $('#unmute').classList.remove('hidden')); };
+    pc.onicecandidate = (e) => { if (e.candidate) sock.send({ type: 'signal', to: from, data: { candidate: e.candidate } }); };
+    pc.onconnectionstatechange = () => { $('#status').textContent = pc ? `Audio link: ${pc.connectionState}` : 'Connected'; };
+    await pc.setRemoteDescription(data.sdp);
+    for (const c of pendingIce) await pc.addIceCandidate(c); pendingIce = [];
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    sock.send({ type: 'signal', to: from, data: { sdp: pc.localDescription } });
+  } else if (data.candidate) {
+    if (pc && pc.remoteDescription) await pc.addIceCandidate(data.candidate); else pendingIce.push(data.candidate);
+  }
+}
+function teardown() { if (pc) { pc.close(); pc = null; } liveId = null; pendingIce = []; out.srcObject = null; $('#status').textContent = 'Connected'; }
+
+// ---- render ----
+function render() {
+  const { room } = state;
+  $('#title').textContent = room.name;
+  $('#count').textContent = `${room.count} in the room · ${room.online} phone${room.online === 1 ? '' : 's'} open`;
+  const live = room.live, nxt = room.queue.find(q => !q.away);
+  $('#livebox').classList.toggle('idle', !live);
+  $('#liveDot').classList.toggle('hidden', !live);
+  $('#liveLabel').textContent = live ? (live.muted ? 'Speaking now · muted' : 'Speaking now') : 'Floor is open';
+  $('#liveLabel').style.color = live ? 'var(--green-text)' : '#a39c90';
+  $('#liveAvatar').textContent = live ? initials(live.name) : '—';
+  $('#liveName').textContent = live ? live.name : (nxt ? `${nxt.name} is up next` : 'Floor is open');
+  $('#liveTimer').textContent = live ? mmss(Date.now() - live.since) : '';
+  $('#next').textContent = nxt ? `Next: ${nxt.name}` : (live ? 'End turn' : 'Next');
+  $('#next').disabled = !nxt && !live;
+  $('#cut').disabled = !live;
+  $('#qlabel').textContent = `Up next · ${room.queue.length} hand${room.queue.length === 1 ? '' : 's'} raised`;
+  setHTML('#queue', room.queue.map(q => `
+    <div class="qitem${q.onDeck && !q.away ? ' deck' : ''}" style="${q.away ? 'opacity:.55' : ''}">
+      <div class="n">${q.position}</div>
+      <div class="avatar ${q.onDeck ? 'warm' : 'neutral'}" style="width:52px;height:52px;font-size:18px">${initials(q.name)}</div>
+      <div class="name grow">${esc(q.name)}</div>
+      <span class="hint" style="color:#a39c90">${q.away ? 'phone closed · skipped' : q.onDeck ? 'On deck' : 'raised ' + ago(q.raisedAt)}</span>
+      <button class="btn dark small" data-act="grant" data-id="${q.id}" ${q.away ? 'disabled' : ''}>Give floor</button>
+      <button class="btn dark small" data-act="remove" data-id="${q.id}" aria-label="Remove ${esc(q.name)}">✕</button>
+    </div>`).join('') || '<div class="hint" style="color:#a39c90;padding:8px 0">Nobody has raised a hand yet.</div>');
+  setHTML('#members', room.members.map(m => `<button data-id="${m.id}" data-on="${m.facilitator ? 0 : 1}" class="${m.facilitator ? 'on' : ''}" style="${m.away ? 'opacity:.5' : ''}">${esc(m.name)}${m.facilitator ? ' · host' : ''}${m.away ? ' · closed' : ''}</button>`).join('') || '<span class="hint" style="color:#a39c90">Nobody has joined yet.</span>');
+  if (!live && pc) teardown();
+}
+setInterval(() => { if (state) render(); }, 1000);
+</script>
+</body>
+</html>

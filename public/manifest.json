@@ -1,0 +1,10 @@
+{
+  "name": "Pass the Mic",
+  "short_name": "Pass the Mic",
+  "description": "Speak from your seat. Your phone becomes the room mic when it's your turn.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f3ee",
+  "theme_color": "#f6f3ee",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
