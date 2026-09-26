@@ -27,7 +27,8 @@
   .btn.dark { background: #2e2b26; color: #fff; border: 1.5px solid #4a463f; }
   .setup { max-width: 520px; margin: 10vh auto; display: flex; flex-direction: column; gap: 18px; }
   .setup input { color: var(--ink); }
-  body.screen-mode .controls, body.screen-mode .qitem button, body.screen-mode .members { display: none; }
+  body.screen-mode .controls > :not(#screenMode), body.screen-mode .qitem button, body.screen-mode .members-wrap { display: none; }
+  body.screen-mode #screenMode { opacity: .35; }
   input[type=range] { accent-color: #b4530a; }
   body.screen-mode .bigname { font-size: 72px; }
   .members { display: flex; flex-wrap: wrap; gap: 8px; }
