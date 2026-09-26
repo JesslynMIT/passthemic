@@ -24,8 +24,8 @@ body.live .eyebrow { color: var(--green-text); }
 .dot { width: 10px; height: 10px; border-radius: 999px; background: var(--green-ink); }
 .dot.red { background: var(--red); }
 label { font-size: 14px; font-weight: 700; color: #3d3934; }
-input[type=text] { width: 100%; height: 56px; padding: 0 16px; font: inherit; font-size: 18px; color: var(--ink); background: #fff; border: 1.5px solid #cfc7b9; border-radius: 12px; }
-input[type=text]:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+input[type=text], input[type=password] { width: 100%; height: 56px; padding: 0 16px; font: inherit; font-size: 18px; color: var(--ink); background: #fff; border: 1.5px solid #cfc7b9; border-radius: 12px; }
+input[type=text]:focus, input[type=password]:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
 .btn { display: flex; align-items: center; justify-content: center; gap: 8px; height: 60px; border: 0; border-radius: 14px; font: inherit; font-size: 18px; font-weight: 700; cursor: pointer; text-decoration: none; padding: 0 18px; }
 .btn.primary { background: var(--accent); color: #fff; }
 .btn.primary:active { background: var(--accent-dark); }
