@@ -156,7 +156,7 @@ const sock = connect({
   onOpen() { if (code) sock.send({ type: 'host:create', code, name: sessionStorage.getItem('ptm.hostName') || '' }); $('#status').textContent = 'Connected'; },
   onMessage(m) {
     switch (m.type) {
-      case 'created': code = m.code; sessionStorage.setItem('ptm.hostCode', code); $('#setup').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#code').textContent = code; $('#qr').src = `/qr.svg?code=${code}`; $('#joinUrl').textContent = location.host; window.__wantAwake = true; keepAwake(); break;
+      case 'created': code = m.code; sessionStorage.setItem('ptm.hostCode', code); $('#setup').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#code').textContent = code; $('#qr').src = `/qr.svg?code=${code}`; $('#joinUrl').textContent = location.host; window.__wantAwake = true; keepAwake(); setTimeout(checkAudioUnlocked, 600); break;
       case 'state': state = m; render(); break;
       case 'signal': onSignal(m.from, m.data); break;
       case 'live-ended': teardown(); break;
@@ -177,7 +177,8 @@ $('#members').addEventListener('click', (e) => { const b = e.target.closest('but
 // Browsers block autoplay until the page has been clicked once.
 document.addEventListener('click', () => { ensureAudio(); if (actx.state !== 'running') actx.resume().catch(() => {}); }, { once: true });
 $('#unmuteBtn').onclick = () => { ensureAudio(); actx.resume().catch(() => {}); $('#unmute').classList.add('hidden'); };
-setTimeout(() => { ensureAudio(); if (actx.state !== 'running') $('#unmute').classList.remove('hidden'); }, 800);
+// Only ask to enable audio once the session screen is showing, never over the setup form.
+function checkAudioUnlocked() { ensureAudio(); if (actx.state !== 'running') $('#unmute').classList.remove('hidden'); }
 
 // ---- WebRTC: one incoming connection at a time, from whoever is live ----
 async function onSignal(from, data) {
