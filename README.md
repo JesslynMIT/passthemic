@@ -43,6 +43,7 @@ Environment variables (all optional):
 | --- | --- | --- |
 | `PORT` | `3000` | Listening port |
 | `AWAY_HAND_MS` | `300000` | How long a closed phone keeps its raised hand (5 min) |
+| `HOST_PIN` | unset | When set, the host page asks for this PIN before creating or taking over a session. Set it on Render → Environment. The join page never needs it. |
 | `ICE_SERVERS` | STUN only | JSON array of ICE servers. Add a TURN server here if attendees will be on cellular data rather than the room WiFi (see "Large rooms") |
 
 The 90 s silence auto-release is set by `SILENCE_MS` in `public/index.html`.

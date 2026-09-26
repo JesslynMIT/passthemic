@@ -34,6 +34,8 @@ app.get('/ice.json', (_req, res) => {
   res.json({ iceServers: servers });
 });
 
+app.get('/config.json', (_req, res) => res.json({ hostPinRequired: !!process.env.HOST_PIN }));
+
 app.get('/healthz', (_req, res) => res.json({ ok: true, rooms: rooms.size }));
 
 const server = http.createServer(app);
@@ -178,6 +180,10 @@ wss.on('connection', (ws) => {
     switch (msg.type) {
       // --- host device ---
       case 'host:create': {
+        // Optional host PIN (env HOST_PIN). When set, nobody can create or take over a session without it.
+        if (process.env.HOST_PIN && String(msg.pin || '') !== process.env.HOST_PIN) {
+          return safeSend(ws, { type: 'error', error: 'Wrong host PIN.' });
+        }
         let code = String(msg.code || '').toUpperCase();
         let room = rooms.get(code);
         if (!room) { code = newCode(); room = new Room(code, msg.name); rooms.set(code, room); }

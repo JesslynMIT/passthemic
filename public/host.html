@@ -46,6 +46,11 @@
   <form id="setupForm" style="display:flex;flex-direction:column;gap:12px">
     <label for="sname" style="color:#e9e3d8">Session name</label>
     <input id="sname" type="text" value="Wednesday Study Group" maxlength="60" required>
+    <div id="pinRow" class="hidden">
+      <label for="spin" style="color:#e9e3d8">Host PIN</label>
+      <input id="spin" type="password" inputmode="numeric" autocomplete="off" placeholder="Ask the organizer">
+    </div>
+    <div id="setupError" class="error hidden" style="color:#ff9a93"></div>
     <button class="btn primary" type="submit">Create session</button>
   </form>
   <div class="hint" style="color:#a39c90">Tip: press F11 (or the fullscreen button later) to put this on the projector.</div>
@@ -153,7 +158,7 @@ $('#kill').onclick = () => {
 window.__host = { get tracks() { return out.srcObject ? out.srcObject.getAudioTracks().length : 0; }, get pcState() { return pc ? pc.connectionState : 'none'; } };
 
 const sock = connect({
-  onOpen() { if (code) sock.send({ type: 'host:create', code, name: sessionStorage.getItem('ptm.hostName') || '' }); $('#status').textContent = 'Connected'; },
+  onOpen() { if (code) sock.send({ type: 'host:create', code, name: sessionStorage.getItem('ptm.hostName') || '', pin: sessionStorage.getItem('ptm.hostPin') || '' }); $('#status').textContent = 'Connected'; },
   onMessage(m) {
     switch (m.type) {
       case 'created': code = m.code; sessionStorage.setItem('ptm.hostCode', code); $('#setup').classList.add('hidden'); $('#app').classList.remove('hidden'); $('#code').textContent = code; $('#qr').src = `/qr.svg?code=${code}`; $('#joinUrl').textContent = location.host; window.__wantAwake = true; keepAwake(); setTimeout(checkAudioUnlocked, 600); break;
@@ -161,12 +166,14 @@ const sock = connect({
       case 'signal': onSignal(m.from, m.data); break;
       case 'live-ended': teardown(); break;
       case 'host-replaced': $('#status').textContent = 'Another device took over as host.'; break;
+      case 'error': { const el = $('#setupError'); el.textContent = m.error; el.classList.remove('hidden'); sessionStorage.removeItem('ptm.hostCode'); code = ''; $('#setup').classList.remove('hidden'); $('#app').classList.add('hidden'); break; }
     }
   },
   onClose() { $('#status').textContent = 'Reconnecting…'; },
 });
 
-$('#setupForm').addEventListener('submit', (e) => { e.preventDefault(); const name = $('#sname').value.trim(); sessionStorage.setItem('ptm.hostName', name); sock.send({ type: 'host:create', name }); });
+fetch('/config.json').then(r => r.json()).then(c => { if (c.hostPinRequired) { $('#pinRow').classList.remove('hidden'); $('#spin').required = true; } }).catch(() => {});
+$('#setupForm').addEventListener('submit', (e) => { e.preventDefault(); const name = $('#sname').value.trim(); const pin = $('#spin').value; sessionStorage.setItem('ptm.hostName', name); sessionStorage.setItem('ptm.hostPin', pin); $('#setupError').classList.add('hidden'); sock.send({ type: 'host:create', name, pin }); });
 $('#next').onclick = () => sock.send({ type: 'next' });
 $('#cut').onclick = () => sock.send({ type: 'cut' });
 $('#screenMode').onclick = () => { document.body.classList.toggle('screen-mode'); $('#screenMode').textContent = document.body.classList.contains('screen-mode') ? 'Show controls' : 'Room screen mode'; };
