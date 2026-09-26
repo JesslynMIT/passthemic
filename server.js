@@ -25,6 +25,15 @@ app.get('/qr.svg', async (req, res) => {
   res.type('image/svg+xml').send(svg);
 });
 
+// ICE servers for WebRTC. Default is STUN only (fine when phones and host share a WiFi).
+// For phones on cellular data, set ICE_SERVERS to a JSON array that includes a TURN server, e.g.
+// [{"urls":"stun:stun.l.google.com:19302"},{"urls":"turn:turn.example.com:3478","username":"u","credential":"p"}]
+app.get('/ice.json', (_req, res) => {
+  let servers = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }];
+  try { if (process.env.ICE_SERVERS) servers = JSON.parse(process.env.ICE_SERVERS); } catch { /* keep default */ }
+  res.json({ iceServers: servers });
+});
+
 app.get('/healthz', (_req, res) => res.json({ ok: true, rooms: rooms.size }));
 
 const server = http.createServer(app);

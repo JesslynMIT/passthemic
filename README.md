@@ -43,6 +43,7 @@ Environment variables (all optional):
 | --- | --- | --- |
 | `PORT` | `3000` | Listening port |
 | `AWAY_HAND_MS` | `300000` | How long a closed phone keeps its raised hand (5 min) |
+| `ICE_SERVERS` | STUN only | JSON array of ICE servers. Add a TURN server here if attendees will be on cellular data rather than the room WiFi (see "Large rooms") |
 
 The 90 s silence auto-release is set by `SILENCE_MS` in `public/index.html`.
 
@@ -68,6 +69,14 @@ Attendees only need the app open to raise a hand and to speak.
 | **Leave** button | Really leaves; next visit shows the join form. |
 
 Tip for regulars: Add to Home Screen once, then it's one tap to raise a hand.
+
+## Large rooms (40+ people)
+
+- **Everyone on the same WiFi as the host laptop** is the reliable path: signalling is tiny and the live phone connects to the laptop directly over the LAN.
+- **A phone hotspot is not a fallback at this size** — hotspots cap at roughly 10 devices. If the venue WiFi is bad, people can use cellular data instead, but then the live phone and the laptop are on different networks and the audio link needs a TURN relay. Set `ICE_SERVERS` with a TURN server (Cloudflare and Metered both have free tiers) — no code change.
+- **Speaker:** a small Bluetooth speaker (JBL Flip/Charge class) covers ~20 people; for 60 use a PartyBox-class speaker or the room PA. Put it at the front, away from the seats.
+- **Facilitation:** hand the host role to a second person so the queue keeps moving if the facilitator is speaking.
+- **Room screen:** use Fullscreen + Room screen mode; the QR is the join path for most people, so make it big. The session code is on screen for anyone who can't scan.
 
 ## Tips that matter in a real room
 

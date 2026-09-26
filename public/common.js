@@ -1,6 +1,8 @@
 // Shared client helpers: socket with auto-reconnect, WebRTC config, small utils.
 window.PTM = (() => {
   const ICE = { iceServers: [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] }] };
+  // Pull the server's ICE config (lets a TURN server be added by env var, no redeploy of the pages).
+  fetch('/ice.json').then(r => r.json()).then(j => { if (j && Array.isArray(j.iceServers) && j.iceServers.length) ICE.iceServers = j.iceServers; }).catch(() => {});
 
   function connect({ onOpen, onMessage, onClose }) {
     let ws, closedByUs = false, backoff = 500;
