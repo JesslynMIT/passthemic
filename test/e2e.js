@@ -40,8 +40,8 @@ const BASE = process.env.BASE || 'http://localhost:3000';
   await maria.click('#hand'); await david.click('#hand');
   await host.waitForFunction(() => document.querySelectorAll('.qitem').length === 2);
   assert.equal(await maria.textContent('#handTitle'), 'Hand raised');
-  assert.equal((await david.textContent('#posTitle')).trim(), "You're 2nd");
-  assert.equal((await maria.textContent('#posTitle')).trim(), "You're next");
+  await david.waitForFunction(() => document.querySelector('#posTitle').textContent.trim() === "You're 2nd", null, { timeout: 5000 });
+  await maria.waitForFunction(() => document.querySelector('#posTitle').textContent.trim() === "You're next", null, { timeout: 5000 });
 
   // host taps Next -> Maria live, audio arrives
   await host.click('#next');

@@ -28,6 +28,7 @@
   .setup { max-width: 520px; margin: 10vh auto; display: flex; flex-direction: column; gap: 18px; }
   .setup input { color: var(--ink); }
   body.screen-mode .controls, body.screen-mode .qitem button, body.screen-mode .members { display: none; }
+  input[type=range] { accent-color: #b4530a; }
   body.screen-mode .bigname { font-size: 72px; }
   .members { display: flex; flex-wrap: wrap; gap: 8px; }
   .members button { font: inherit; font-size: 13px; padding: 6px 10px; border-radius: 999px; border: 1px solid #4a463f; background: transparent; color: #e9e3d8; cursor: pointer; }
@@ -78,6 +79,8 @@
       <div class="controls">
         <button class="btn primary" id="next" style="height:56px">Next</button>
         <button class="btn dark" id="cut" style="height:56px">Cut</button>
+        <button class="btn" id="kill" style="height:56px;background:#ff5a4f;color:#fff" title="Mutes the room for 2 seconds, then comes back quieter">Kill feedback</button>
+        <label class="row" style="gap:8px;color:#bfe3cb;font-size:13px;font-weight:700"><span>Volume</span><input id="vol" type="range" min="0" max="150" value="80" style="width:140px"><span id="volPct">80%</span></label>
         <span class="grow"></span>
         <button class="btn dark small" id="screenMode" style="height:56px">Room screen mode</button>
         <button class="btn dark small" id="fullscreen" style="height:56px">Fullscreen</button>
@@ -109,13 +112,44 @@
   </div>
 </div>
 
-<audio id="out" autoplay playsinline></audio>
+<audio id="out" autoplay playsinline muted></audio>
 
 <script src="/common.js"></script>
 <script>
 const { $, setHTML, connect, ICE, initials, mmss, ago, esc, keepAwake } = PTM;
 let state = null, pc = null, liveId = null, code = sessionStorage.getItem('ptm.hostCode') || '', pendingIce = [];
 const out = $('#out');
+// Host output chain: incoming voice → volume → limiter → speakers. The <audio> element stays muted; it only keeps the
+// WebRTC track flowing (browsers need a sink) while Web Audio does the actual playback so we can limit and duck it.
+let actx = null, masterGain = null, hostSrc = null;
+const savedVol = Number(localStorage.getItem('ptm.vol') || 80);
+$('#vol').value = savedVol; $('#volPct').textContent = savedVol + '%';
+function ensureAudio() {
+  if (actx) return actx;
+  actx = new (window.AudioContext || window.webkitAudioContext)();
+  masterGain = actx.createGain(); masterGain.gain.value = Number($('#vol').value) / 100;
+  const lim = actx.createDynamicsCompressor();
+  lim.threshold.value = -6; lim.knee.value = 2; lim.ratio.value = 20; lim.attack.value = 0.001; lim.release.value = 0.1;
+  masterGain.connect(lim); lim.connect(actx.destination);
+  return actx;
+}
+function playStream(ms) {
+  ensureAudio();
+  if (hostSrc) { try { hostSrc.disconnect(); } catch {} }
+  hostSrc = actx.createMediaStreamSource(ms); hostSrc.connect(masterGain);
+  if (actx.state !== 'running') actx.resume().catch(() => $('#unmute').classList.remove('hidden'));
+}
+$('#vol').oninput = () => { const v = Number($('#vol').value); $('#volPct').textContent = v + '%'; localStorage.setItem('ptm.vol', v); if (masterGain) masterGain.gain.setTargetAtTime(v / 100, actx.currentTime, 0.02); };
+// Panic button: hard mute for 2 s, then return at 70% of the previous level so the loop can't restart.
+$('#kill').onclick = () => {
+  if (!masterGain) return;
+  const v = Number($('#vol').value);
+  masterGain.gain.cancelScheduledValues(actx.currentTime);
+  masterGain.gain.setValueAtTime(0, actx.currentTime);
+  const back = Math.max(20, Math.round(v * 0.7));
+  setTimeout(() => { $('#vol').value = back; $('#vol').oninput(); }, 2000);
+  $('#status').textContent = `Feedback killed — volume will return at ${back}%`;
+};
 window.__host = { get tracks() { return out.srcObject ? out.srcObject.getAudioTracks().length : 0; }, get pcState() { return pc ? pc.connectionState : 'none'; } };
 
 const sock = connect({
@@ -141,8 +175,9 @@ $('#queue').addEventListener('click', (e) => { const b = e.target.closest('butto
 $('#members').addEventListener('click', (e) => { const b = e.target.closest('button[data-id]'); if (b) sock.send({ type: 'handoff', id: b.dataset.id, on: b.dataset.on === '1' }); });
 
 // Browsers block autoplay until the page has been clicked once.
-out.play().catch(() => $('#unmute').classList.remove('hidden'));
-$('#unmuteBtn').onclick = () => { out.play().catch(() => {}); $('#unmute').classList.add('hidden'); };
+document.addEventListener('click', () => { ensureAudio(); if (actx.state !== 'running') actx.resume().catch(() => {}); }, { once: true });
+$('#unmuteBtn').onclick = () => { ensureAudio(); actx.resume().catch(() => {}); $('#unmute').classList.add('hidden'); };
+setTimeout(() => { ensureAudio(); if (actx.state !== 'running') $('#unmute').classList.remove('hidden'); }, 800);
 
 // ---- WebRTC: one incoming connection at a time, from whoever is live ----
 async function onSignal(from, data) {
@@ -151,7 +186,7 @@ async function onSignal(from, data) {
     teardown();
     liveId = from;
     pc = new RTCPeerConnection(ICE);
-    pc.ontrack = (e) => { out.srcObject = e.streams[0]; out.play().catch(() => $('#unmute').classList.remove('hidden')); };
+    pc.ontrack = (e) => { out.srcObject = e.streams[0]; out.play().catch(() => {}); playStream(e.streams[0]); };
     pc.onicecandidate = (e) => { if (e.candidate) sock.send({ type: 'signal', to: from, data: { candidate: e.candidate } }); };
     pc.onconnectionstatechange = () => { $('#status').textContent = pc ? `Audio link: ${pc.connectionState}` : 'Connected'; };
     await pc.setRemoteDescription(data.sdp);
@@ -163,7 +198,7 @@ async function onSignal(from, data) {
     if (pc && pc.remoteDescription) await pc.addIceCandidate(data.candidate); else pendingIce.push(data.candidate);
   }
 }
-function teardown() { if (pc) { pc.close(); pc = null; } liveId = null; pendingIce = []; out.srcObject = null; $('#status').textContent = 'Connected'; }
+function teardown() { if (pc) { pc.close(); pc = null; } liveId = null; pendingIce = []; out.srcObject = null; if (hostSrc) { try { hostSrc.disconnect(); } catch {} hostSrc = null; } $('#status').textContent = 'Connected'; }
 
 // ---- render ----
 function render() {

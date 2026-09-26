@@ -78,6 +78,22 @@ Tip for regulars: Add to Home Screen once, then it's one tap to raise a hand.
 - **Facilitation:** hand the host role to a second person so the queue keeps moving if the facilitator is speaking.
 - **Room screen:** use Fullscreen + Room screen mode; the QR is the join path for most people, so make it big. The session code is on screen for anyone who can't scan.
 
+## Feedback (echo) control
+
+Browser echo cancellation only removes sound the *same device* plays, and the live phone plays nothing — so it does not stop room feedback by itself. What does:
+
+| Layer | What it does |
+| --- | --- |
+| Phone: auto-gain OFF | AGC amplifies quiet input; that is what turns a faint echo into a howl |
+| Phone: noise gate | Mic is effectively closed between words; opens in ~5 ms on voice. Threshold adapts to each phone's noise floor |
+| Phone: high-pass + compressor | Cuts rumble and handling noise; tames loud bursts |
+| Host: volume slider | Set it during sound check: raise until you hear a faint ring, then back off 20% |
+| Host: limiter | Hard ceiling so a spike can't run away |
+| Host: **Kill feedback** button | Mutes the room for 2 s, then returns at 70% of the previous level |
+| Room: placement | Speaker at the front, pointing at the audience; seats start 2–3 m back; speakers hold the phone near the mouth |
+
+Sound-check routine (2 minutes, before people arrive): one person live at the front row, one at the back row. Raise volume until the back can hear clearly. If it rings, tap Kill feedback and leave it at the level it returns to.
+
 ## Tips that matter in a real room
 
 - **Feedback:** keep the speakers a few metres from the seats; the phone's own speaker is never used, and echo cancellation is on. If you still get a squeal, lower the PA a notch.
